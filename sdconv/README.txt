@@ -21,14 +21,10 @@ Dictionary 2.0 [3] 词典格式的转换工具。这是一个预发布的初步�
 安装
 ----
 
-首先从以下地址下载 converter-0.2.tar.bz2 压缩包:
+下载 sdconv-0.2.tar.bz2 压缩包后，将其解压到如 ~/ 这样的目录下: 
 
-    http://jjgod.org/program/converter-0.2.tar.bz2
-
-然后将其解压到如 ~/ 这样的目录下: 
-
-    $ tar -jxf converter-0.2.tar.bz2 -C ~/
-    $ export CONVERTER_PATH=~/converter-0.2
+    $ tar -jxf sdconv-0.2.tar.bz2 -C ~/
+    $ export CONVERTER_PATH=~/sdconv-0.2
 
 在下面我们会使用环境变量 $CONVERTER_PATH 表示用于执行转换脚本的路径。
 
