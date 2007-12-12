@@ -1,0 +1,5 @@
+#summary GUI mode Dictionary conversion tool
+
+= Introduction =
+
+Only supports stardict format.
