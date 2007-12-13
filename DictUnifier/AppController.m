@@ -125,9 +125,7 @@
                                        alternateButton: nil
                                            otherButton: nil
                              informativeTextWithFormat: @"Please choose a dictionary file first."];
-        [alert runModal];
-        // [alert release];
-        
+        [alert runModal];        
         return;
     }
     
@@ -161,8 +159,6 @@
     [progressIndicator startAnimation: self];
     [convertButton setEnabled: NO];
     [task launch];
-    // [task waitUntilExit];
-    // [progressIndicator stopAnimation: self];
     
     int status = [task terminationStatus];
     
