@@ -137,12 +137,18 @@
     NSArray *arguments = [NSArray arrayWithObjects: scriptPath, [[dictionaryPath URL] path], nil];
     NSPipe *pipe = [NSPipe pipe];
     
-    [task setCurrentDirectoryPath: NSHomeDirectory()];
+    NSString *workingPath = [NSHomeDirectory() stringByAppendingFormat: @"/.sdconv"];
+    [[NSFileManager defaultManager] createDirectoryAtPath: workingPath 
+                              withIntermediateDirectories: YES 
+                                               attributes: nil 
+                                                    error: NULL];
+
+    [task setCurrentDirectoryPath: workingPath];
     [task setLaunchPath: @"/usr/bin/python"];
     [task setArguments: arguments];
     [task setStandardOutput: pipe];
     [task setStandardError: pipe];
-    
+
     readHandle = [pipe fileHandleForReading];
 
     [[NSNotificationCenter defaultCenter] addObserver: self 
