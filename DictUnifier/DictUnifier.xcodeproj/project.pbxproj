@@ -273,6 +273,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
 				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+				VERSIONING_SYSTEM = "";
 			};
 			name = Debug;
 		};
@@ -290,6 +291,7 @@
 				HEADER_SEARCH_PATHS = /usr/local/include;
 				PREBINDING = NO;
 				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+				VERSIONING_SYSTEM = "";
 			};
 			name = Release;
 		};
