@@ -4,22 +4,22 @@
 #include <zlib.h>
 #include <sys/stat.h>
 
-sd_index::sd_index()
+mdk_index::mdk_index()
 {
 	entry_buffer = NULL;
 }
 
-sd_index::~sd_index()
+mdk_index::~mdk_index()
 {
 	g_free(entry_buffer);
 }
 
-guint32 sd_index::entry_count()
+guint32 mdk_index::entry_count()
 {
     return entry_list.size();
 }
 
-bool sd_index::load(const gchar *file, guint32 entry_count, guint32 fsize)
+bool mdk_index::load(const gchar *file, guint32 entry_count, guint32 fsize)
 {
     size_t len;
 
@@ -65,7 +65,7 @@ bool sd_index::load(const gchar *file, guint32 entry_count, guint32 fsize)
 	return true;
 }
 
-bool sd_index::get_entry(guint32 index, sd_entry *entry)
+bool mdk_index::get_entry(guint32 index, mdk_entry *entry)
 {
     if (index >= entry_count())
         return false;

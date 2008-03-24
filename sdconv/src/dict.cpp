@@ -7,30 +7,38 @@ static void parse_description(const char *p, long len,
 {
 	description.clear();
 	const char *p1 = p;
-	while (p1 - p < len) {
-		if (*p1 == '<') {
+
+	while (p1 - p < len)
+    {
+		if (*p1 == '<')
+        {
 			p1++;
-			if ((*p1 == 'b' || *p1 == 'B') && (*(p1+1)=='r' || *(p1+1)=='R') && *(p1+2)=='>') {
+			if ((*p1 == 'b' || *p1 == 'B') && 
+                (*(p1 + 1) == 'r' || *(p1 + 1) == 'R') && 
+                *(p1 + 2)=='>')
+            {
 				description += '\n';
-				p1+=3;
-			} else {
+				p1 += 3;
+			} else
+            {
 				description += '<';
 			}
-		} else {
+		} else
+        {
 			description += *p1;
 			p1++;
 		}
 	}
 }
 
-sd_dict::sd_dict()
+mdk_dict::mdk_dict()
 {
     dictfile = NULL;
     index    = NULL;
     storage  = NULL;
 }
 
-sd_dict::~sd_dict()
+mdk_dict::~mdk_dict()
 {
     if (dictfile)
         fclose(dictfile);
@@ -41,7 +49,7 @@ sd_dict::~sd_dict()
     delete storage;
 }
 
-bool sd_dict::load(const std::string& ifofilename)
+bool mdk_dict::load(const std::string& ifofilename)
 {
     if (! load_ifo(ifofilename.c_str()))
         return false;
@@ -76,7 +84,7 @@ bool sd_dict::load(const std::string& ifofilename)
         fullfilename.erase(fullfilename.length() - sizeof(".gz") + 1, 
                            sizeof(".gz") - 1);
 
-    index = new sd_index();
+    index = new mdk_index();
     if (! index->load(fullfilename.c_str(), wordcount, index_file_size))
         return false;
 
@@ -110,7 +118,7 @@ bool sd_dict::load(const std::string& ifofilename)
     return true;
 }
 
-bool sd_dict::load_ifo(const gchar *file)
+bool mdk_dict::load_ifo(const gchar *file)
 {
     gchar *buffer;
 
@@ -149,9 +157,9 @@ bool sd_dict::load_ifo(const gchar *file)
 	}
 
 	p3 = strchr(p2 + sizeof("\nwordcount=")-1,'\n');
-	gchar *tmpstr = (gchar *)g_memdup(p2 + sizeof("\nwordcount=")-1, 
-                                      p3 - (p2+sizeof("\nwordcount=")-1)+1);
-	tmpstr[p3-(p2+sizeof("\nwordcount=")-1)] = '\0';
+	gchar *tmpstr = (gchar *)g_memdup(p2 + sizeof("\nwordcount=") - 1, 
+                                      p3 - (p2+sizeof("\nwordcount=") - 1) + 1);
+	tmpstr[p3 - (p2 + sizeof("\nwordcount=") - 1)] = '\0';
 	wordcount = atol(tmpstr);
 	g_free(tmpstr);
 
@@ -232,11 +240,12 @@ bool sd_dict::load_ifo(const gchar *file)
 		p2 = p2 + sizeof("\ndescription=")-1;
 		p3 = strchr(p2, '\n');
 
-		parse_description(p2, p3-p2, description);
+		parse_description(p2, p3 - p2, description);
 	}
 
 	p2 = strstr(p1,"\nsametypesequence=");
-	if (p2) {
+	if (p2)
+    {
 		p2 += sizeof("\nsametypesequence=") - 1;
 		p3 = strchr(p2, '\n');
 		sametypesequence.assign(p2, p3 - p2);
@@ -250,7 +259,7 @@ bool sd_dict::load_ifo(const gchar *file)
     return true;
 }
 
-gchar *sd_dict::get_entry_data(sd_entry *entry)
+gchar *mdk_dict::get_entry_data(mdk_entry *entry)
 {
     int i;
     guint32 idxitem_offset = entry->offset;

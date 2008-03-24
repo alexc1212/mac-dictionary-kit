@@ -1,7 +1,7 @@
 // dict.h
 
-#ifndef DICT_H
-#define DICT_H
+#ifndef MDK_DICT_H
+#define MDK_DICT_H
 
 #include <glib.h>
 #include <string>
@@ -10,7 +10,7 @@
 #include "index.h"
 #include "storage.h"
 
-class sd_dict {
+class mdk_dict {
 private:
     guint32     wordcount;
     guint32     synwordcount;
@@ -24,15 +24,15 @@ private:
     std::string sametypesequence;
     std::string dicttype;
 
-	sd_index   *index;
+	mdk_index   *index;
 	ResourceStorage *storage;
 
 	bool load_ifo(const gchar *file);
 	FILE *dictfile;
 
 public:
-	sd_dict();
-	~sd_dict();
+	mdk_dict();
+	~mdk_dict();
 	bool load(const std::string&);
 
 	const std::string& dict_name() { return bookname; }
@@ -43,11 +43,11 @@ public:
         return index->entry_count();
     }
     
-    gchar *get_entry_data(sd_entry *entry);
+    gchar *get_entry_data(mdk_entry *entry);
 
 	gchar *get_entry_data_by_index(guint32 index)
 	{
-        sd_entry entry;
+        mdk_entry entry;
 
 		if (get_entry_by_index(index, &entry))
             return get_entry_data(&entry);
@@ -55,7 +55,7 @@ public:
         return NULL;
 	}
 
-	bool get_entry_by_index(guint32 idx, sd_entry *entry)
+	bool get_entry_by_index(guint32 idx, mdk_entry *entry)
 	{
 		return index->get_entry(idx, entry);
 	}

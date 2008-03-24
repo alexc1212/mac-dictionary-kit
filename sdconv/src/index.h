@@ -1,28 +1,38 @@
-// index.h
+// index.h: dictionary index
 
-#ifndef INDEX_H
-#define INDEX_H
+#ifndef MDK_INDEX_H
+#define MDK_INDEX_H
 
 #include <vector>
 #include <string>
 #include <glib.h>
-#include "getuint32.h"
 
-typedef struct sd_entry {
+#ifdef ARM
+static inline guint32 get_uint32(const gchar *addr)
+{
+	guint32 result;
+	memcpy(&result, addr, sizeof(guint32));
+	return result;
+}
+#else
+#define get_uint32(x) *reinterpret_cast<const guint32 *>(x)
+#endif
+
+typedef struct mdk_entry {
     const gchar *key;
     guint32 offset;
     guint32 size;
-} sd_entry;
+} mdk_entry;
 
-class sd_index {
+class mdk_index {
 public:
-    sd_index();
-	~sd_index();
+    mdk_index();
+	~mdk_index();
 
 	bool load(const gchar *file, 
               guint32 entry_count, 
               guint32 fsize);
-    bool get_entry(guint32 index, sd_entry *entry);
+    bool get_entry(guint32 index, mdk_entry *entry);
 
     guint32 entry_count();
 
