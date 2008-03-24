@@ -70,18 +70,20 @@ void fini_python()
     Py_Finalize();
 }
 
-void convert_with_python(FILE *fp, gchar *source)
+bool convert_with_python(gchar *src, GString *dest)
 {
-    PyObject *pargs = Py_BuildValue("(s)", source);
+    PyObject *pargs = Py_BuildValue("(s)", src);
     PyObject *pstr  = PyEval_CallObject(py_transform_func, 
                                         pargs);
 
     char *cstr;
     PyArg_Parse(pstr, "s", &cstr);
 
-    fprintf(fp, "%s", cstr);
+    g_string_append(dest, cstr);
 
     Py_DECREF(pstr);
     Py_DECREF(pargs);
+
+    return true;
 }
 
