@@ -5,9 +5,25 @@
 #include "python.h"
 #include "index.h"
 
-inline void convert_with_glib(FILE *fp, gchar *source)
+GString *mdk_start_convert(struct convert_module *mod)
 {
-    fprintf(fp, "%s", source);
+    return g_string_new("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                 "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\" "
+                                 "xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">\n\n");
+}
+
+void mdk_finish_convert(struct convert_module *mod, GString *dest)
+{
+    g_string_append(dest, "</d:dictionary>\n");
+}
+
+inline bool convert_with_glib(gchar *src, GString *dest)
+{
+	g_string_append(dest, "<pre>\n");
+    g_string_append(dest, src);
+	g_string_append(dest, "\n</pre>\n");
+
+    return true;
 }
 
 struct convert_module convert_module_list[] = {
@@ -27,25 +43,18 @@ struct convert_module *mdk_get_convert_module(const char *name)
     return NULL;
 }
 
-void mdk_convert_with_module(struct convert_module *mod, 
-                             FILE *fp, gchar *data)
+void convert_with_module(struct convert_module *mod, 
+                         gchar *src, GString *dest)
 {
     guint32 data_size, sec_size;
-    int first = 1;
-    std::string mark;    
 
-    data_size = get_uint32(data);
-    data += sizeof(guint32);
+    data_size = get_uint32(src);
+    src += sizeof(guint32);
 
-    const gchar *p = data;
+    const gchar *p = src;
 
-    while (guint32(p - data) < data_size)
+    while (guint32(p - src) < data_size)
     {
-        if (first)
-            first = 0;
-        else
-            mark += "\n";
-
         switch (*p)
         {
 			case 'm':
@@ -55,11 +64,9 @@ void mdk_convert_with_module(struct convert_module *mod,
 
 				if (sec_size)
                 {
-					fprintf(fp, "<pre>\n");
 					gchar *m_str = g_markup_escape_text(p, sec_size);
-                    mod->convert(fp, m_str);
+                    mod->convert(m_str, dest);
 					g_free(m_str);
-					fprintf(fp, "\n</pre>\n");
 				}
 
 				sec_size++;
@@ -70,9 +77,9 @@ void mdk_convert_with_module(struct convert_module *mod,
 				sec_size = strlen(p);
 				if (sec_size)
                 {
-					fprintf(fp, "<pre>\n");
-					fprintf(fp, "%s", p);
-					fprintf(fp, "\n</pre>");
+					g_string_append(dest, "<pre>\n");
+					g_string_append(dest, p);
+					g_string_append(dest, "\n</pre>");
                 }
 				sec_size++;
 				break;
@@ -84,33 +91,21 @@ void mdk_convert_with_module(struct convert_module *mod,
 				p++;
 				sec_size = strlen(p) + 1;
 
-                fprintf(fp, "<p class=\"error\">Format not supported.</p>");
+                g_string_append(dest, 
+                                "<p class=\"error\">Format not supported.</p>");
 				break;
 
 			case 't':
+            case 'y':
 				p++;
 				sec_size = strlen(p);
 				if (sec_size)
                 {
-					fprintf(fp, "<div class=\"t\">");
+					g_string_append_printf(dest, "<div class=\"%c\">", *p);
 					gchar *m_str = g_markup_escape_text(p, sec_size);
-					fprintf(fp, "%s", m_str);
+					g_string_append(dest, m_str);
 					g_free(m_str);
-					fprintf(fp, "</div>");
-				}
-				sec_size++;
-				break;
-
-			case 'y':
-				p++;
-				sec_size = strlen(p);
-				if (sec_size)
-                {
-					fprintf(fp, "<div class=\"y\">");
-					gchar *m_str = g_markup_escape_text(p, sec_size);
-					fprintf(fp, "%s", m_str);
-					g_free(m_str);
-					fprintf(fp, "</div>");
+					g_string_append(dest, "</div>");
 				}
 				sec_size++;
 				break;
@@ -127,9 +122,9 @@ void mdk_convert_with_module(struct convert_module *mod,
 				sec_size = ntohl(get_uint32(p));
 				if (sec_size) {
 					// TODO: extract images from here
-					fprintf(fp, "<span foreground=\"red\">[Missing Image]</span>");
+					g_string_append(dest, "<span foreground=\"red\">[Missing Image]</span>");
 				} else {
-					fprintf(fp, "<span foreground=\"red\">[Missing Image]</span>");
+					g_string_append(dest, "<span foreground=\"red\">[Missing Image]</span>");
 				}
 
                 sec_size += sizeof(guint32);
@@ -146,11 +141,35 @@ void mdk_convert_with_module(struct convert_module *mod,
 					sec_size = strlen(p) + 1;
 				}
 
-				fprintf(fp, "<p class=\"error\">Unknown data type.</p>");
+				g_string_append(dest, 
+                                "<p class=\"error\">Unknown data type.</p>");
 				break;
 		}
 
 		p += sec_size;
     }
+}
+
+void mdk_convert_index_with_module(struct convert_module *mod, 
+                                   mdk_dict *dict,
+                                   unsigned int index,
+                                   GString *dest)
+{
+    mdk_entry entry;
+
+    dict->get_entry_by_index(index, &entry);
+    gchar *m_str = g_markup_escape_text(entry.key, strlen(entry.key));
+
+    g_string_append_printf(dest, "<d:entry id=\"%d\" d:title=\"%s\">\n"
+                                 "<d:index d:value=\"%s\"/>\n"
+                                 "<h1>%s</h1>\n", 
+                           index, m_str, m_str, m_str);
+    g_free(m_str);
+
+    gchar *src = dict->get_entry_data(&entry);
+    convert_with_module(mod, src, dest);
+    g_free(src);
+
+    g_string_append(dest, "</d:entry>\n\n");
 }
 

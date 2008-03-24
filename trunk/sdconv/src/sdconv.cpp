@@ -97,7 +97,6 @@ int main(int argc, char *argv[])
 
     const char *path = argv[i++];
     const std::string url(path);
-    mdk_entry entry;
     int count;
     mdk_dict *dict = new mdk_dict;
 
@@ -113,7 +112,10 @@ int main(int argc, char *argv[])
     printf("%s %d\n", dict->dict_name().c_str(), count);
 
     if (debug_mode)
+    {
         fp = stderr;
+        count = DEBUG_OUT_ENTRIES;
+    }
     else
     {
         outfile = argv[i];
@@ -125,33 +127,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    fprintf(fp, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            "<d:dictionary xmlns=\"http://www.w3.org/1999/xhtml\" "
-            "xmlns:d=\"http://www.apple.com/DTDs/DictionaryService-1.0.rng\">\n\n");
+    GString *dest = mdk_start_convert(mod);
 
     for (i = 0; i < count; i++)
-    {
-        dict->get_entry_by_index(i, &entry);
-		
-        gchar *m_str = g_markup_escape_text(entry.key, strlen(entry.key));
- 
-        fprintf(fp, "<d:entry id=\"%d\" d:title=\"%s\">\n"
-                "<d:index d:value=\"%s\"/>\n"
-                "<h1>%s</h1>\n", i, m_str, m_str, m_str);
-        
-        g_free(m_str);
+        mdk_convert_index_with_module(mod, dict, i, dest);
 
-        gchar *data = dict->get_entry_data(&entry);
-        mdk_convert_with_module(mod, fp, data);
-        g_free(data);
-
-        fprintf(fp, "</d:entry>\n\n");
-
-        if (debug_mode && i > DEBUG_OUT_ENTRIES)
-            break;
-    }
-
-    fprintf(fp, "</d:dictionary>\n");
+    mdk_finish_convert(mod, dest);
+    fprintf(fp, "%s", dest->str);
+    g_string_free(dest, TRUE);
     fclose(fp);
 
     if (mod->fini)

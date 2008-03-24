@@ -4,5 +4,5 @@
 
 bool init_python(const char *file);
 void fini_python();
-void convert_with_python(FILE *fp, gchar *source);
+bool convert_with_python(gchar *src, GString *dest);
 
