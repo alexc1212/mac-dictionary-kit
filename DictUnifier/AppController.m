@@ -72,7 +72,7 @@
     [super dealloc];
 }
 
-- (void)outputString:(NSString *)string
+- (void) outputString:(NSString *)string
 {
     if (string == nil)
         return;
@@ -94,7 +94,8 @@
     
     if (error)
         NSLog(@"sdconv: error %d.", error);
-    else {
+    else
+    {
 		NSData *data = [userInfo objectForKey: NSFileHandleNotificationDataItem];
 		NSUInteger length = [data length];
         if (length == 0)
@@ -131,10 +132,11 @@
     
     NSTask *task = [[NSTask alloc] init];
     
-    NSString *scriptPath = [[[NSBundle mainBundle] resourcePath] stringByAppendingFormat: @"/sdconv/convert"];
+    NSString *scriptPath = [NSString stringWithFormat: @"%@/sdconv/convert", 
+                            [[NSBundle mainBundle] resourcePath]];
     NSArray *arguments = [NSArray arrayWithObjects: scriptPath, [[dictionaryPath URL] path], nil];
     NSPipe *pipe = [NSPipe pipe];
-    
+
     NSString *workingPath = [NSHomeDirectory() stringByAppendingFormat: @"/.sdconv"];
     [[NSFileManager defaultManager] createDirectoryAtPath: workingPath 
                               withIntermediateDirectories: YES 
