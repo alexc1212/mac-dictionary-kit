@@ -1,32 +1,50 @@
 #!/usr/bin/python
 
 import sys, os, glob, commands
+from optparse import OptionParser
+
+temp_dir = ".sdconv-temp"
+
+script_module = { ".py": "python" }
 
 def cleanup():
-    os.system("rm -rf temp/")
+    os.system("rm -rf %s" % temp_dir)
 
 self_path = sys.path[0]
 
-if len(sys.argv) < 2:
+usage = "usage: %prog [options] <stardict-*.bz2>"
+parser = OptionParser(usage)
+parser.add_option("-s", "--script", dest="script",
+                  help="use FILE as script to process dictionary", 
+                  metavar="FILE")
+parser.add_option("-n", "--name", dest="name", 
+                  help="use STR as the dictionary name [default: guessed]")
+parser.add_option("-i", "--id", dest="id", 
+                  help="use STR as the dictionary id [default: guessed]")
+
+(options, args) = parser.parse_args()
+
+if len(args) != 1:
     print "usage: convert <stardict-*.bz2>"
     sys.exit(1)
 
-dict_file = sys.argv[1]
+dict_file = args[0]
+script_file = None
 
 cleanup()
-os.makedirs("temp/")
+os.makedirs(temp_dir)
 
 # if it's a bzipped file, extract it first
 if dict_file.endswith(".bz2"):
-    os.system("tar -xjf %s -C temp/" % dict_file)
+    os.system("tar -xjf '%s' -C %s" % (dict_file, temp_dir))
     
-    ifos = glob.glob("temp/*/*.ifo")
+    ifos = glob.glob("%s/*/*.ifo" % temp_dir)
 
     if len(ifos) == 0:
         print "no .ifo files existed in %s, not a valid stardict format" % dict_file
         cleanup()
         sys.exit(1)
-    
+
     ifo_file = ifos[0]
 
 elif dict_file.endswith(".ifo"):
@@ -35,10 +53,29 @@ elif dict_file.endswith(".ifo"):
     else:
         print "%s not readable" % dict_file
         sys.exit(1)
+else:
+    print "%s not readable" % dict_file
+    sys.exit(1)
+
+if options.script:
+    script_file = options.script
+    if os.access(script_file, os.R_OK):
+        ext = os.path.splitext(script_file)[1]
+        if ext in script_module:
+            module = script_module[ext]
+            print "script_file = %s (%s)" % (script_file, module)
+        else:
+            print "script %s not supported" % script_file
+            sys.exit(1)
+    else:
+        print "script %s not readable" % script_file
+        sys.exit(1)
 
 print "ifo_file = %s" % ifo_file
 
 (dict_id, ext) = os.path.splitext(os.path.basename(ifo_file))
+if options.id:
+    dict_id = options.id
 print "dict_id = %s" % dict_id
 
 # dyld_lib_path = os.getenv("DYLD_LIBRARY_PATH")
@@ -46,12 +83,20 @@ print "dict_id = %s" % dict_id
 
 # os.putenv("DYLD_LIBRARY_PATH", dyld_lib_path)
 
-dict_path = "temp/dict-%s" % dict_id
+dict_path = "%s/dict-%s" % (temp_dir, dict_id)
 
-os.system("cp -r %s/templates %s" % (self_path, dict_path))
+os.system("cp -r '%s/templates' '%s'" % (self_path, dict_path))
 
-cmd = "DYLD_LIBRARY_PATH=%s/bin %s/bin/sdconv %s %s/Dictionary.xml" % (self_path, self_path, 
-                                                                          ifo_file, dict_path)
+if script_file: 
+    script_opt = "-m %s '%s' " % (module, script_file)
+else:
+    script_opt = ""
+
+cmd = "DYLD_LIBRARY_PATH='%s/bin' '%s/bin/sdconv' %s%s '%s/Dictionary.xml'" % (self_path, 
+                                                                               self_path,
+                                                                               script_opt,
+                                                                               ifo_file, 
+                                                                               dict_path)
 print cmd
 (status, output) = commands.getstatusoutput(cmd)
 if status != 0:
@@ -59,15 +104,18 @@ if status != 0:
     cleanup()
     sys.exit(1)
 
-dict_name = output.split()[0]
+if options.name:
+    dict_name = options.name
+else:
+    dict_name = output.split()[0]
+
 print "dict_name = %s" % dict_name
 
-os.system("/usr/bin/sed -i '' -e 's/\\$DICT_NAME/%s/g' %s/DictInfo.plist" % (dict_name, dict_path))
-os.system("/usr/bin/sed -i '' -e 's/\\$DICT_ID/%s/g' %s/DictInfo.plist" % (dict_id, dict_path))
+os.system("/usr/bin/sed -i '' -e 's/\\$DICT_NAME/%s/g' '%s/DictInfo.plist'" % (dict_name, dict_path))
+os.system("/usr/bin/sed -i '' -e 's/\\$DICT_ID/%s/g' '%s/DictInfo.plist'" % (dict_id, dict_path))
 
-os.system("cat %s/DictInfo.plist" % dict_path);
-cwd = os.getcwd()
-os.system("cd %s; python build-dict.py %s '%s'; cd %s" % (dict_path, dict_id, self_path, cwd));
+os.system("cat %s/DictInfo.plist" % dict_path)
+os.system("pushd %s; python build-dict.py %s '%s'; popd" % (dict_path, dict_id, self_path))
 
 cleanup()
 
