@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import sys, os, glob, commands
+import sys, os, glob, commands, urllib2
+import PListReader, xml.sax
 from optparse import OptionParser
 
 temp_dir = ".sdconv-temp"
@@ -10,6 +11,37 @@ script_module = { ".py": "python" }
 def cleanup():
     os.system("rm -rf %s" % temp_dir)
 
+def list_dictionaries():
+    def get_dict_property(dict_path):
+        dict_plist = "%s/Contents/Info.plist" % dict_path
+        try:
+            reader = PListReader.PListReader()
+            parser = xml.sax.make_parser()
+            for key, value in reader.getRecommendedFeatures().items():
+                parser.setFeature(key, value)
+            parser.setContentHandler(reader)
+            parser.parse(open(dict_plist, 'r'))
+
+            # print the Python data structure
+            result = reader.getResult()
+            dict_id = result["CFBundleIdentifier"].split('.')[-1]
+            return [ dict_id, result["CFBundleDisplayName"] ]
+        except:
+           return [ "(null)", "(null)" ]
+
+    def print_dictionary_info(dict_path):
+        (dict_id, dict_name) = get_dict_property(dict_path)
+        print "%20s: %s" % (dict_id, dict_name)
+
+    print "Installed dictionaries:\n"
+
+    # initialize dicts with *.dictionary files in user's home directory
+    dicts = glob.glob(os.path.expanduser("~/Library/Dictionaries/*.dictionary"))
+    # then add dictionaries in system directory
+    dicts.extend(glob.glob("/Library/Dictionaries/*.dictionary"))
+    for dict in dicts:
+        print_dictionary_info(dict)
+
 self_path = sys.path[0]
 
 usage = "usage: %prog [options] <stardict-*.bz2>"
@@ -17,15 +49,23 @@ parser = OptionParser(usage)
 parser.add_option("-s", "--script", dest="script",
                   help="use FILE as script to process dictionary", 
                   metavar="FILE")
-parser.add_option("-n", "--name", dest="name", 
+parser.add_option("-n", "--name", dest="name", metavar="STR",
                   help="use STR as the dictionary name [default: guessed]")
-parser.add_option("-i", "--id", dest="id", 
+parser.add_option("-i", "--id", dest="id", metavar="STR",
                   help="use STR as the dictionary id [default: guessed]")
+parser.add_option("-d", "--debug", dest="debug", action="store_true", 
+                  help="enable debugging mode (only converts a few entries)")
+parser.add_option("-l", "--list", dest="list", action="store_true",
+                  help="list installed dictionaries")
 
 (options, args) = parser.parse_args()
 
+if options.list:
+    list_dictionaries()
+    sys.exit()
+
 if len(args) != 1:
-    print "usage: convert <stardict-*.bz2>"
+    print "usage: convert [options] <stardict-*.bz2> (-h for full usage)"
     sys.exit(1)
 
 dict_file = args[0]
@@ -92,11 +132,17 @@ if script_file:
 else:
     script_opt = ""
 
-cmd = "DYLD_LIBRARY_PATH='%s/bin' '%s/bin/sdconv' %s%s '%s/Dictionary.xml'" % (self_path, 
-                                                                               self_path,
-                                                                               script_opt,
-                                                                               ifo_file, 
-                                                                               dict_path)
+if options.debug:
+    debug_opt = "-d "
+else:
+    debug_opt = ""
+
+cmd = "DYLD_LIBRARY_PATH='%s/bin' '%s/bin/sdconv' %s%s'%s' '%s/Dictionary.xml'" % (self_path, 
+                                                                                  self_path,
+                                                                                  debug_opt,
+                                                                                  script_opt,
+                                                                                  ifo_file, 
+                                                                                  dict_path)
 print cmd
 (status, output) = commands.getstatusoutput(cmd)
 if status != 0:

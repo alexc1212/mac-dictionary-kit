@@ -1,6 +1,10 @@
 CC = g++
 
 DESTDIR = ..
+VER = 1.1
+TOPDIR = ../..
+RLSBINDIR = ${TOPDIR}/sdconv-current
+RLSSRCDIR = ${TOPDIR}/sdconv-src
 BINDIR = ${DESTDIR}/bin
 LIBDIR = ${DESTDIR}/bin
 INCLUDEDIR = ${DESTDIR}/include
@@ -17,8 +21,21 @@ $(LIBDIR)/libmdk.dylib: index.o dict.o storage.o convert.o python.o
 	$(CC) $(LDFLAGS) $(PYTHON_LDFLAGS) -install_name libmdk.dylib $^ -o $@
 
 clean:
-	rm *.o
+	rm -f *.o
+
+release-bin: $(BINDIR)/sdconv
+	rm -rf $(RLSBINDIR)
+	mkdir -p $(RLSBINDIR)
+	cp -r $(BINDIR) $(RLSBINDIR)/bin
+	cp -r $(DESTDIR)/templates $(RLSBINDIR)/templates
+	cp $(DESTDIR)/*.py $(RLSBINDIR)
+	cp $(DESTDIR)/convert $(RLSBINDIR)
+	@find $(RLSBINDIR) -type d -name .svn | xargs rm -rf
+
+release-src:
+	rm -f ${TOPDIR}/sdconv-$(VER).tar.gz
+	cd ${TOPDIR}; tar --exclude *.o --exclude .svn --exclude *.swp -czf sdconv-$(VER).tar.gz sdconv
 
 dist-clean:
-	rm $(BINDIR)/sdconv $(LIBDIR)/libmdk.dylib
+	rm -f $(BINDIR)/sdconv $(LIBDIR)/libmdk.dylib
 
