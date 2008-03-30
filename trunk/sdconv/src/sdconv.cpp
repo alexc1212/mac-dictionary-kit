@@ -112,19 +112,14 @@ int main(int argc, char *argv[])
     printf("%s %d\n", dict->dict_name().c_str(), count);
 
     if (debug_mode)
-    {
-        fp = stderr;
         count = DEBUG_OUT_ENTRIES;
-    }
-    else
+    
+    outfile = argv[i];
+    fp = fopen(outfile, "w");
+    if (! fp)
     {
-        outfile = argv[i];
-        fp = fopen(outfile, "w");
-        if (! fp)
-        {
-            fprintf(stderr, "%s: write to output file '%s' failed.\n", argv[0], outfile);
-            return 1;
-        }
+        fprintf(stderr, "%s: write to output file '%s' failed.\n", argv[0], outfile);
+        return 1;
     }
 
     GString *dest = mdk_start_convert(mod);
