@@ -9,9 +9,9 @@
 /* Begin PBXBuildFile section */
 		07195C0C0D0321A2002F08F9 /* AppController.m in Sources */ = {isa = PBXBuildFile; fileRef = 07195C0B0D0321A2002F08F9 /* AppController.m */; };
 		07195D2B0D035B59002F08F9 /* SDDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = 07195D2A0D035B59002F08F9 /* SDDictionary.m */; };
-		072993980D0DEC9200F9AD1B /* sdconv in Resources */ = {isa = PBXBuildFile; fileRef = 0729931F0D0DEC9200F9AD1B /* sdconv */; };
 		072993A70D0DF63400F9AD1B /* DiskUnifier.icns in Resources */ = {isa = PBXBuildFile; fileRef = 072993A60D0DF63400F9AD1B /* DiskUnifier.icns */; };
 		072993CF0D0E4FF100F9AD1B /* archive.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 072993CE0D0E4FF100F9AD1B /* archive.a */; };
+		076C25D00DA01FBD007120C1 /* sdconv-current in Resources */ = {isa = PBXBuildFile; fileRef = 076C25AB0DA01FBD007120C1 /* sdconv-current */; };
 		8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */ = {isa = PBXBuildFile; fileRef = 29B97318FDCFA39411CA2CEA /* MainMenu.nib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
@@ -23,9 +23,9 @@
 		07195C0B0D0321A2002F08F9 /* AppController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppController.m; sourceTree = "<group>"; };
 		07195D290D035B59002F08F9 /* SDDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDDictionary.h; sourceTree = "<group>"; };
 		07195D2A0D035B59002F08F9 /* SDDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDDictionary.m; sourceTree = "<group>"; };
-		0729931F0D0DEC9200F9AD1B /* sdconv */ = {isa = PBXFileReference; lastKnownFileType = folder; name = sdconv; path = ../sdconv; sourceTree = SOURCE_ROOT; };
 		072993A60D0DF63400F9AD1B /* DiskUnifier.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = DiskUnifier.icns; sourceTree = "<group>"; };
 		072993CE0D0E4FF100F9AD1B /* archive.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = archive.a; sourceTree = "<group>"; };
+		076C25AB0DA01FBD007120C1 /* sdconv-current */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "sdconv-current"; path = "../sdconv-current"; sourceTree = SOURCE_ROOT; };
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
@@ -112,8 +112,8 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				076C25AB0DA01FBD007120C1 /* sdconv-current */,
 				072993A60D0DF63400F9AD1B /* DiskUnifier.icns */,
-				0729931F0D0DEC9200F9AD1B /* sdconv */,
 				8D1107310486CEB800E47090 /* Info.plist */,
 				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
 				29B97318FDCFA39411CA2CEA /* MainMenu.nib */,
@@ -176,8 +176,8 @@
 			files = (
 				8D11072A0486CEB800E47090 /* MainMenu.nib in Resources */,
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
-				072993980D0DEC9200F9AD1B /* sdconv in Resources */,
 				072993A70D0DF63400F9AD1B /* DiskUnifier.icns in Resources */,
+				076C25D00DA01FBD007120C1 /* sdconv-current in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,6 +232,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)\"",
 					"\"$(SRCROOT)/../../c/dict/sdconv/bin\"",
+					"\"$(SRCROOT)/../sdconv-current/bin\"",
 				);
 				PRODUCT_NAME = DictUnifier;
 				WRAPPER_EXTENSION = app;
@@ -256,6 +257,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)\"",
+					"\"$(SRCROOT)/../sdconv-current/bin\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lz",

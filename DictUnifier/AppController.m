@@ -32,38 +32,55 @@
 - (IBAction)chooseFile:(id)sender
 {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
+    BOOL chooseDictionary = ([sender isEqual: chooseDictionaryButton] || [sender isEqual: dictionaryPath]);
     [panel setAllowsMultipleSelection: NO];
     [panel setCanChooseDirectories: NO];
     [panel setCanChooseFiles: YES];
     [panel setResolvesAliases: YES];
-    [panel setTitle: @"Choose a dictionary file"];
+    [panel setTitle: [NSString stringWithFormat: @"Choose a %s file", chooseDictionary ? "dictionary" : "script", nil]];
     [panel setPrompt: @"Choose"];
     
-    if ([panel runModalForTypes: [NSArray arrayWithObject: @"bz2"]] == NSOKButton)
-    {
-        [dictionaryPath setURL: [[panel URLs] objectAtIndex: 0]];
-        
-        // [progressIndicator setHidden: NO];
-        [progressIndicator setIndeterminate: YES];
-        [progressIndicator setStyle: NSProgressIndicatorSpinningStyle];
-        [progressIndicator startAnimation: self];
-        
-        dictionary = [[SDDictionary alloc] initWithArchive: [[dictionaryPath URL] path]];
+    NSString *ext = chooseDictionary ? @"bz2" : @"py";
 
-        [progressIndicator stopAnimation: self];
-        [dictionaryNameField setStringValue: [dictionary name]];
-        [dictionaryWordCountField setIntegerValue: [dictionary wordCount]];
-        [dictionaryIDField setStringValue: [dictionary identifier]];
-        
-        [dictionaryNameField setEnabled: YES];
-        [dictionaryIDField setEnabled: YES];
-        [dictionaryNameField setEditable:YES];
-        [dictionaryIDField setEditable: YES];
+    if ([panel runModalForTypes: [NSArray arrayWithObject: ext]] == NSOKButton)
+    {
+        if (chooseDictionary)
+        {
+            [dictionaryPath setURL: [[panel URLs] objectAtIndex: 0]];
+            
+            // [progressIndicator setHidden: NO];
+            [progressIndicator setIndeterminate: YES];
+            [progressIndicator setStyle: NSProgressIndicatorSpinningStyle];
+            [progressIndicator startAnimation: self];
+            
+            dictionary = [[SDDictionary alloc] initWithArchive: [[dictionaryPath URL] path]];
+
+            [progressIndicator stopAnimation: self];
+            [dictionaryNameField setStringValue: [dictionary name]];
+            [dictionaryWordCountField setIntegerValue: [dictionary wordCount]];
+            [dictionaryIDField setStringValue: [dictionary identifier]];
+            
+            [dictionaryNameField setEnabled: YES];
+            [dictionaryIDField setEnabled: YES];
+            [dictionaryNameField setEditable:YES];
+            [dictionaryIDField setEditable: YES];
+        } else
+            [scriptFilePath setURL: [[panel URLs] objectAtIndex: 0]];
     } else
     {
-        [dictionary release];
-        dictionary = nil;
+        if (chooseDictionary)
+        {
+            [dictionary release];
+            dictionary = nil;
+        }
     }
+}
+
+- (IBAction)useScript:(id)sender
+{
+    NSLog(@"enabled = %s", [sender state] ? "YES" : "NO");
+    [scriptFilePath setEnabled: [sender state]];
+    [chooseScriptButton setEnabled: [sender state]];
 }
 
 - (void) dealloc
@@ -132,10 +149,19 @@
     
     NSTask *task = [[NSTask alloc] init];
     
-    NSString *scriptPath = [NSString stringWithFormat: @"%@/sdconv/convert", 
+    NSString *scriptPath = [NSString stringWithFormat: @"%@/sdconv-current/convert", 
                             [[NSBundle mainBundle] resourcePath]];
-    NSArray *arguments = [NSArray arrayWithObjects: scriptPath, [[dictionaryPath URL] path], nil];
+    NSMutableArray *arguments = [NSMutableArray arrayWithObjects: scriptPath, 
+                                 @"-i", [dictionaryIDField stringValue], 
+                                 @"-n", [dictionaryNameField stringValue], 
+                                 [[dictionaryPath URL] path], nil];
     NSPipe *pipe = [NSPipe pipe];
+    
+    if ([useScriptButton state])
+    {
+        [arguments insertObject: [[scriptFilePath URL] path] atIndex: 1];
+        [arguments insertObject: @"-s" atIndex: 1];
+    }
 
     NSString *workingPath = [NSHomeDirectory() stringByAppendingFormat: @"/.sdconv"];
     [[NSFileManager defaultManager] createDirectoryAtPath: workingPath 
