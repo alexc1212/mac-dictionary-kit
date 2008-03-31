@@ -57,6 +57,8 @@ parser.add_option("-d", "--debug", dest="debug", action="store_true",
                   help="enable debugging mode (only converts a few entries)")
 parser.add_option("-l", "--list", dest="list", action="store_true",
                   help="list installed dictionaries")
+parser.add_option("-c", "--console", dest="console", action="store_true",
+                  help="output to console, do not write files")
 
 (options, args) = parser.parse_args()
 
@@ -137,17 +139,26 @@ if options.debug:
 else:
     debug_opt = ""
 
-cmd = "DYLD_LIBRARY_PATH='%s/bin' '%s/bin/sdconv' %s%s'%s' '%s/Dictionary.xml'" % (self_path, 
-                                                                                  self_path,
-                                                                                  debug_opt,
-                                                                                  script_opt,
-                                                                                  ifo_file, 
-                                                                                  dict_path)
+if options.console:
+    out_file = ""
+else:
+    out_file = " '%s/Dictionary.xml'" % dict_path
+
+cmd = "DYLD_LIBRARY_PATH='%s/bin' '%s/bin/sdconv' %s%s'%s'%s" % (self_path, 
+                                                                 self_path,
+                                                                 debug_opt,
+                                                                 script_opt,
+                                                                 ifo_file, 
+                                                                 out_file)
 print cmd
 (status, output) = commands.getstatusoutput(cmd)
 if status != 0:
     print "convert dictionary %s failed, abort now." % dict_id
     cleanup()
+    sys.exit(1)
+
+if options.console:
+    print output
     sys.exit(1)
 
 if options.name:

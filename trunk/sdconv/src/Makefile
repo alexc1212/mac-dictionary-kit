@@ -33,8 +33,8 @@ release-bin: $(BINDIR)/sdconv
 	@find $(RLSBINDIR) -type d -name .svn | xargs rm -rf
 
 release-src:
-	rm -f ${TOPDIR}/sdconv-$(VER).tar.gz
-	cd ${TOPDIR}; tar --exclude *.o --exclude .svn --exclude *.swp -czf sdconv-$(VER).tar.gz sdconv
+	rm -f ${TOPDIR}/sdconv-$(VER).tar.bz2
+	cd ${TOPDIR}; tar --exclude *.o --exclude .svn --exclude *.swp -cjf sdconv-$(VER).tar.bz2 sdconv
 
 dist-clean:
 	rm -f $(BINDIR)/sdconv $(LIBDIR)/libmdk.dylib
