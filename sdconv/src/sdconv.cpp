@@ -2,26 +2,29 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include <mdk.h>
-
-#define DEBUG_OUT_ENTRIES   3
 
 void show_usage()
 {
-    fprintf(stderr, "usage: sdconv [options] [script.py/rb/lua] <dict.ifo> <output.xml>\n\n"
+    fprintf(stderr, "usage: sdconv [options] [script.py] <dict.ifo> [output.xml]\n\n"
                     "Available options:\n"
                     "   -m <module>: select convert module, available: python\n"
-                    "   -d         : debug mode\n"
+                    "   -d [num/r] : debug mode [num for start number, r for random]\n"
                     "   -h         : show this help page\n\n"
                     "For additional information, see http://mac-dictionary-kit.googlecode.com/\n");
     exit(1);
 }
 
+enum debug_mode { DEBUG_MODE_OFF, DEBUG_MODE_NUM, DEBUG_MODE_RANDOM };
+
 int main(int argc, char *argv[])
 {
-    int i = 1, debug_mode = 0;
+    int i = 1, debug_mode = DEBUG_MODE_OFF;
     FILE *fp;
     char *outfile, *module_name = "default", *module_file = NULL;
+    int start = 0;
 
     if (argc < 3)
         show_usage();
@@ -31,8 +34,33 @@ int main(int argc, char *argv[])
     {
         if (strcmp(argv[i], "-d") == 0)
         {
-            debug_mode = 1;
+            debug_mode = DEBUG_MODE_NUM;
             i++;
+
+            if (i < argc)
+            {
+                // specify an start id
+                if (isdigit(argv[i][0]))
+                { 
+                    start = strtol(argv[i++], NULL, 10);
+
+                    if (start <= 0)
+                    {
+                        fprintf(stderr, "-d option comes with "
+                                        "positive start number.\n");
+                        return 1;
+                    }
+                }
+
+                // random mode
+                else if (strlen(argv[i]) == 1 && argv[i][0] == 'r')
+                {
+                    debug_mode = DEBUG_MODE_RANDOM;
+                    i++;
+                }
+
+                // otherwise leave it alone, use default start id (0)
+            }
         }
 
         else
@@ -42,7 +70,7 @@ int main(int argc, char *argv[])
 
             if (i >= argc)
             {
-                fprintf(stderr, "-m options must come with a module name.\n");
+                fprintf(stderr, "-m option must come with a module name.\n");
                 return 1;
             }
 
@@ -91,13 +119,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (debug_mode && argc - i < 1 || 
-        ! debug_mode && argc - i < 2)
+    // we must leave at least one argument for input file name
+    if (argc - i < 1)
         show_usage();
 
     const char *path = argv[i++];
     const std::string url(path);
-    int count;
+    int end, count;
     mdk_dict *dict = new mdk_dict;
 
     setlocale(LC_ALL, "");
@@ -109,28 +137,57 @@ int main(int argc, char *argv[])
     }
 
     count = dict->get_entry_count();
-    printf("%s %d\n", dict->dict_name().c_str(), count);
 
     if (debug_mode)
-        count = DEBUG_OUT_ENTRIES;
-    
-    outfile = argv[i];
-    fp = fopen(outfile, "w");
-    if (! fp)
     {
-        fprintf(stderr, "%s: write to output file '%s' failed.\n", argv[0], outfile);
-        return 1;
+        if (debug_mode == DEBUG_MODE_RANDOM)
+        {
+            srandom(time(0));
+
+            double r = random();
+            start = count * r / RAND_MAX;
+        }
+
+        else if (start >= count)
+        {
+            fprintf(stderr, "%s: start entry id %d is larger than "
+                            "the total entry number (%d).\n", 
+                    argv[0], start, count);
+            return 1;
+        }
+        count = 1;
     }
+
+    printf("%s %d %d\n", 
+           dict->dict_name().c_str(), 
+           dict->get_entry_count(), start);
+
+    end = start + count;
+
+    // if we have yet another argument, that's the output file
+    // otherwise we'll output to stdout
+    if (i < argc)
+    {
+        outfile = argv[i];
+        fp = fopen(outfile, "w");
+        if (! fp)
+        {
+            fprintf(stderr, "%s: write to output file '%s' failed.\n", argv[0], outfile);
+            return 1;
+        }
+    } else
+        fp = stdout;
 
     GString *dest = mdk_start_convert(mod);
 
-    for (i = 0; i < count; i++)
+    for (i = start; i < end; i++)
         mdk_convert_index_with_module(mod, dict, i, dest);
 
     mdk_finish_convert(mod, dest);
     fprintf(fp, "%s", dest->str);
     g_string_free(dest, TRUE);
-    fclose(fp);
+    if (fp != stdout)
+        fclose(fp);
 
     if (mod->fini)
         mod->fini();
