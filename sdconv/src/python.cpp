@@ -76,12 +76,18 @@ bool convert_with_python(gchar *src, GString *dest)
     PyObject *pstr  = PyEval_CallObject(py_transform_func, 
                                         pargs);
 
-    char *cstr;
-    PyArg_Parse(pstr, "s", &cstr);
+    if (pstr)
+    {
+        char *cstr = NULL;
+        PyArg_Parse(pstr, "s", &cstr);
 
-    g_string_append(dest, cstr);
+        if (cstr)
+            g_string_append(dest, cstr);
 
-    Py_DECREF(pstr);
+        Py_DECREF(pstr);
+    } else
+        g_string_append(dest, "failed to transform\n");
+
     Py_DECREF(pargs);
 
     return true;
