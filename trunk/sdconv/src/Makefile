@@ -1,7 +1,7 @@
 CC = g++
 
 DESTDIR = ..
-VER = 1.1
+VER = 0.3
 TOPDIR = ../..
 RLSBINDIR = ${TOPDIR}/sdconv-current
 RLSSRCDIR = ${TOPDIR}/sdconv-src
