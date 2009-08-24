@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 {
     int i = 1, debug_mode = DEBUG_MODE_OFF;
     FILE *fp;
-    char *outfile, *module_name = "default", *module_file = NULL;
+    const char *outfile, *module_name = "default", *module_file = NULL;
     int start = 0;
 
     if (argc < 3)

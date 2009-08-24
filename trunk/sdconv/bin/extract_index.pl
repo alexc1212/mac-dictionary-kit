@@ -22,10 +22,17 @@ my $index_ndnm					= "index";
 # attribute name
 my $id_atnm						= "id";
 my $parental_control_atnm		= "parental-control";
+my $priority_atnm				= "priority";
 my $value_atnm					= "value";
 my $title_atnm					= "title";
 my $yomi_atnm					= "yomi";
 my $anchor_atnm					= "anchor";
+
+my $priority_max				= 9;
+my $priority_shift				= 1;	# Use bit 1-4 from LSB.
+										# Bit 0 at LSB is for parental-control.
+
+my $warn_msg_count_for_missing_entry_title	= 0;
 
 # =============================================================
 # main
@@ -89,11 +96,26 @@ sub process_an_entry
 	}
 	
 	
-	# Check title attr in the entry.
-	if ( $entry_tag =~ /$reqsp$ns$title_atnm$optsp=$optsp"([^"]+)"/ )
+	# Check entry_title (title attr in the entry).
+	if ( $entry_tag =~ /$reqsp$ns$title_atnm$optsp=$optsp"([^"]*)"/ )
 	{
 		$entry_title	= $1;
 	}
+	if ( ! defined( $entry_title ) )
+	{
+		$entry_title = '';
+		
+		$warn_msg_count_for_missing_entry_title++;
+		if ( $warn_msg_count_for_missing_entry_title <= 100 )
+		{
+			printf STDERR "** No title for entry[$entry_tag].  Proceeding with empty title.\n";
+			if ( $warn_msg_count_for_missing_entry_title == 100 )
+			{
+				printf STDERR "** Maybe more...\n";
+			}
+		}
+	}
+	$entry_title = decode_xml_char( $entry_title );
 	
 	# Check yomi attr in the entry.
 	if ( $entry_tag =~ /$reqsp$ns$yomi_atnm$optsp=$optsp"([^"]+)"/ )
@@ -127,6 +149,7 @@ sub process_an_index
 	my $value;
 	my $title;
 	my $index_parental_flag = 0;
+	my $index_priority_flag = 0;
 	my $index_flags			= 0;
 	my $anchor				="";
 	my $yomi;
@@ -148,13 +171,14 @@ sub process_an_index
 		$title = $value;
 	}
 	
+	# parental-control (optional)
 	if ( $index =~ /$reqsp$ns$parental_control_atnm$optsp=$optsp"([^"]+)"/ )
 	{
 		$index_parental_flag	= $1;
 	}
 	if ( $index_parental_flag > 0 )
 	{
-		$index_flags = $index_parental_flag;	
+		$index_flags = $index_flags | $index_parental_flag;	
 		# flags contains parental-control-flag only, now.
 	}
 	else
@@ -162,12 +186,32 @@ sub process_an_index
 		$index_flags = $entry_flags;
 	}
 	
+	# priority (optional)
+	if ( $index =~ /$reqsp$ns$priority_atnm$optsp=$optsp"([^"]+)"/ )
+	{
+		$index_priority_flag	= $1;
+	}
+	if ( defined( $index_priority_flag ) && $index_priority_flag > 0 )
+	{
+		if ( $index_priority_flag > $priority_max )
+		{
+			printf STDERR "*** Invalid priority. Ignored -- entry[$entry_id] index[$index]\n";
+		}
+		else
+		{
+			$index_priority_flag = $index_priority_flag << $priority_shift;	# 
+			$index_flags = $index_flags | $index_priority_flag;
+		}
+		
+	}
+	
+	# anchor (optional)
 	if ( $index =~ /$reqsp$ns$anchor_atnm$optsp=$optsp"([^"]+)"/ )
 	{
 		$anchor	= $1;
 	}
 	
-	
+	# yomi (optional)
 	if ( $index =~ /$reqsp$ns$yomi_atnm$optsp=$optsp"([^"]+)"/ )
 	{
 		$yomi	= $1;
@@ -190,8 +234,13 @@ sub process_an_index
 		$title = decode_xml_char( $title );
 		$yomi = decode_xml_char( $yomi );
 		# Not decode $entry_id. It should not contain such chracter entities.
-		printf "%s\t%s\t%s\t%s\t%s\t%s\n", 
-			$value, $entry_id, $index_flags, $title, $anchor, $yomi;
+		# Not decode $entry_id. It is already decoded in the caller.
+		if ( $entry_title eq $title )
+		{
+			$entry_title = '';		# Put it only when it is different from $title.
+		}
+		printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
+			$value, $entry_id, $index_flags, $title, $anchor, $yomi, $entry_title;
 	}
 	else
 	{
