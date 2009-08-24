@@ -35,6 +35,8 @@ void add_directory_of_file_to_path(const char *file)
 
 bool init_python(const char *file)
 {
+    PyObject *module;
+
     char *module_name = copy_module_name_from_file(file);
     if (! module_name)
         goto failed2;
@@ -43,7 +45,7 @@ bool init_python(const char *file)
     add_directory_of_file_to_path(file);
     
     fprintf(stderr, "loading module %s...\n", module_name);
-    PyObject *module = PyImport_ImportModule(module_name);
+    module = PyImport_ImportModule(module_name);
     if (! module)
         goto failed1;
 

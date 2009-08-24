@@ -1,7 +1,7 @@
 CC = g++
 
 DESTDIR = ..
-VER = 0.3
+VER = 0.4
 TOPDIR = ../..
 RLSBINDIR = ${TOPDIR}/sdconv-current
 RLSSRCDIR = ${TOPDIR}/sdconv-src
@@ -9,16 +9,14 @@ BINDIR = ${DESTDIR}/bin
 LIBDIR = ${DESTDIR}/bin
 INCLUDEDIR = ${DESTDIR}/include
 
-CXXFLAGS = -Wall -I. -I$(INCLUDEDIR)/glib -I$(INCLUDEDIR) -isysroot /Developer/SDKs/MacOSX10.5.sdk -arch ppc -arch i386
+UBFLAGS = -isysroot /Developer/SDKs/MacOSX10.5.sdk -arch ppc -arch i386 -mmacosx-version-min=10.5
+CXXFLAGS = -Wall -I. -I$(INCLUDEDIR)/glib -I$(INCLUDEDIR) $(UBFLAGS)
 GLIB_LDFLAGS = -lglib-2.0 -L$(LIBDIR)
 PYTHON_LDFLAGS = -lpython
-LDFLAGS = -dynamiclib $(GLIB_LDFLAGS) -lz -lintl -arch ppc -arch i386
+LDFLAGS = $(GLIB_LDFLAGS) $(PYTHON_LDFLAGS) -lz $(UBFLAGS)
 
-$(BINDIR)/sdconv: sdconv.o $(LIBDIR)/libmdk.dylib
-	$(CC) $(CXXFLAGS) $(GLIB_LDFLAGS) -Wall $^ -o $@
-
-$(LIBDIR)/libmdk.dylib: index.o dict.o storage.o convert.o python.o
-	$(CC) $(LDFLAGS) $(PYTHON_LDFLAGS) -install_name libmdk.dylib $^ -o $@
+$(BINDIR)/sdconv: sdconv.o index.o dict.o storage.o convert.o python.o
+	$(CC) $(LDFLAGS) $(GLIB_LDFLAGS) -Wall $^ -o $@
 
 clean:
 	rm -f *.o
@@ -37,5 +35,5 @@ release-src:
 	cd ${TOPDIR}; tar --exclude *.o --exclude .svn --exclude *.swp -cjf sdconv-$(VER).tar.bz2 sdconv
 
 dist-clean:
-	rm -f $(BINDIR)/sdconv $(LIBDIR)/libmdk.dylib
+	rm -f $(BINDIR)/sdconv
 

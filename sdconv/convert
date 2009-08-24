@@ -1,12 +1,10 @@
 #!/usr/bin/python
 
-import sys, os, glob, commands, urllib2
-import PListReader, xml.sax
+import sys, os, glob, commands, urllib2, plistlib, logging, shutil
 from optparse import OptionParser
 
-temp_dir = ".sdconv-temp"
-
-script_module = { ".py": "python" }
+temp_dir = os.path.expanduser("~/.sdconv-temp")
+logging.basicConfig(level=logging.DEBUG,)
 
 def cleanup():
     os.system("rm -rf %s" % temp_dir)
@@ -15,15 +13,8 @@ def list_dictionaries():
     def get_dict_property(dict_path):
         dict_plist = "%s/Contents/Info.plist" % dict_path
         try:
-            reader = PListReader.PListReader()
-            parser = xml.sax.make_parser()
-            for key, value in reader.getRecommendedFeatures().items():
-                parser.setFeature(key, value)
-            parser.setContentHandler(reader)
-            parser.parse(open(dict_plist, 'r'))
+            result = plistlib.readPlist(dict_plist)
 
-            # print the Python data structure
-            result = reader.getResult()
             dict_id = result["CFBundleIdentifier"].split('.')[-1]
             return [ dict_id, result["CFBundleDisplayName"] ]
         except:
@@ -31,9 +22,9 @@ def list_dictionaries():
 
     def print_dictionary_info(dict_path):
         (dict_id, dict_name) = get_dict_property(dict_path)
-        print "%20s: %s" % (dict_id, dict_name)
+        print("%20s: %s" % (dict_id, dict_name))
 
-    print "Installed dictionaries:\n"
+    print("Installed dictionaries:\n")
 
     # initialize dicts with *.dictionary files in user's home directory
     dicts = glob.glob(os.path.expanduser("~/Library/Dictionaries/*.dictionary"))
@@ -42,137 +33,166 @@ def list_dictionaries():
     for dict in dicts:
         print_dictionary_info(dict)
 
-self_path = sys.path[0]
+def build_dictionary(work_dir, dict_name, dict_build_tool_dir):
+    cwd = os.getcwd()
+    os.chdir(work_dir)
 
-usage = "usage: %prog [options] <stardict-*.bz2>"
-parser = OptionParser(usage)
-parser.add_option("-s", "--script", dest="script",
-                  help="use FILE as script to process dictionary", 
-                  metavar="FILE")
-parser.add_option("-n", "--name", dest="name", metavar="STR",
-                  help="use STR as the dictionary name [default: guessed]")
-parser.add_option("-i", "--id", dest="id", metavar="STR",
-                  help="use STR as the dictionary id [default: guessed]")
-parser.add_option("-d", "--debug", dest="debug", action="store_true", 
-                  help="enable debugging mode (only converts a few entries)")
-parser.add_option("-l", "--list", dest="list", action="store_true",
-                  help="list installed dictionaries")
-parser.add_option("-c", "--console", dest="console", action="store_true",
-                  help="output to console, do not write files")
+    # The DICT_BUILD_TOOL_DIR value is used also in "build_dict.sh" script.
+    # You need to set it when you invoke the script directly.
+    dict_build_tool_bin = "%s/bin" % dict_build_tool_dir
 
-(options, args) = parser.parse_args()
+    os.putenv("LANG", "en_US.UTF-8")
+    os.putenv("DICT_BUILD_TOOL_DIR", dict_build_tool_dir)
 
-if options.list:
-    list_dictionaries()
-    sys.exit()
+    # Enable 10.6 support if available
+    extra_flags = ""
+    if commands.getoutput("sw_vers -productVersion") == "10.6":
+        extra_flags = "-v 10.6 "
 
-if len(args) != 1:
-    print "usage: convert [options] <stardict-*.bz2> (-h for full usage)"
-    sys.exit(1)
+    cmd = "\"%s/build_dict.sh\" %s%s Dictionary.xml Dictionary.css DictInfo.plist" % \
+            (dict_build_tool_bin, extra_flags, dict_name)
+    logging.debug(cmd)
+    os.system(cmd)
+    logging.info("Done.")
 
-dict_file = args[0]
-script_file = None
+    dest_dir = os.path.expanduser("~/Library/Dictionaries")
+    logging.info("Installing into %s." % dest_dir)
 
-cleanup()
-os.makedirs(temp_dir)
+    os.system("mkdir -p %s" % dest_dir)
+    os.system("rm -rf %s/%s.dictionary" % (dest_dir, dict_name))
+    os.system("ditto --noextattr --norsrc ./objects/%s.dictionary %s/%s.dictionary" % \
+            (dict_name, dest_dir, dict_name))
+    os.utime(dest_dir, None)
 
-# if it's a bzipped file, extract it first
-if dict_file.endswith(".bz2"):
-    os.system("tar -xjf '%s' -C %s" % (dict_file, temp_dir))
-    
-    ifos = glob.glob("%s/*/*.ifo" % temp_dir)
+    os.chdir(cwd)
 
-    if len(ifos) == 0:
-        print "no .ifo files existed in %s, not a valid stardict format" % dict_file
+    logging.info("Done.\nTo test the new dictionary, try Dictionary.app.")
+
+def convert_dictionary(dict_file, options):
+    script_file   = None
+    script_module = { ".py": "python" }
+    self_path     = sys.path[0]
+
+    cleanup()
+    os.makedirs(temp_dir)
+
+    # if it's a bzipped file, extract it first
+    if dict_file.endswith(".bz2"):
+        os.system("tar -xjf '%s' -C %s" % (dict_file, temp_dir))
+
+        ifos = glob.glob("%s/*/*.ifo" % temp_dir)
+
+        if len(ifos) == 0:
+            logging.error("no .ifo files existed in %s, not a valid stardict format" % dict_file)
+            cleanup()
+            sys.exit(1)
+
+        ifo_file = ifos[0]
+
+    elif dict_file.endswith(".ifo"):
+        if os.access(dict_file, os.R_OK):
+            ifo_file = dict_file
+        else:
+            logging.error("%s not readable" % dict_file)
+            sys.exit(1)
+    else:
+        logging.error("%s not readable" % dict_file)
+        sys.exit(1)
+
+    if options.script:
+        script_file = options.script
+        if os.access(script_file, os.R_OK):
+            ext = os.path.splitext(script_file)[1]
+            if ext in script_module:
+                module = script_module[ext]
+                logging.info("script_file = %s (%s)" % (script_file, module))
+            else:
+                logging.error("script %s not supported" % script_file)
+                sys.exit(1)
+        else:
+            logging.error("script %s not readable" % script_file)
+            sys.exit(1)
+
+    logging.info("ifo_file = %s" % ifo_file)
+
+    (dict_id, ext) = os.path.splitext(os.path.basename(ifo_file))
+    if options.id:
+        dict_id = options.id
+    logging.info("dict_id = %s" % dict_id)
+
+    dict_path = "%s/dict-%s" % (temp_dir, dict_id)
+    shutil.copytree("%s/templates" % self_path, dict_path)
+
+    if script_file:
+        script_opt = "-m %s '%s' " % (module, script_file)
+    else:
+        script_opt = ""
+
+    if options.debug:
+        debug_opt = "-d "
+    else:
+        debug_opt = ""
+
+    if options.console:
+        out_file = ""
+    else:
+        out_file = " '%s/Dictionary.xml'" % dict_path
+
+    cmd = "'%s/bin/sdconv' %s%s'%s'%s" % (self_path, debug_opt, script_opt,
+                                          ifo_file, out_file)
+    logging.debug(cmd)
+
+    (status, output) = commands.getstatusoutput(cmd)
+    if status != 0:
+        logging.error("convert dictionary %s failed, abort now." % dict_id)
         cleanup()
         sys.exit(1)
 
-    ifo_file = ifos[0]
-
-elif dict_file.endswith(".ifo"):
-    if os.access(dict_file, os.R_OK):
-        ifo_file = dict_file
-    else:
-        print "%s not readable" % dict_file
-        sys.exit(1)
-else:
-    print "%s not readable" % dict_file
-    sys.exit(1)
-
-if options.script:
-    script_file = options.script
-    if os.access(script_file, os.R_OK):
-        ext = os.path.splitext(script_file)[1]
-        if ext in script_module:
-            module = script_module[ext]
-            print "script_file = %s (%s)" % (script_file, module)
-        else:
-            print "script %s not supported" % script_file
-            sys.exit(1)
-    else:
-        print "script %s not readable" % script_file
+    if options.console:
+        logging.debug(output)
         sys.exit(1)
 
-print "ifo_file = %s" % ifo_file
+    if options.name:
+        dict_name = options.name
+    else:
+        dict_name = output.split()[0]
 
-(dict_id, ext) = os.path.splitext(os.path.basename(ifo_file))
-if options.id:
-    dict_id = options.id
-print "dict_id = %s" % dict_id
+    logging.debug("dict_name = %s" % dict_name.decode("utf-8"))
 
-# dyld_lib_path = os.getenv("DYLD_LIBRARY_PATH")
-# dyld_lib_path = "%s/lib:%s" % (self_path, dyld_lib_path)
+    os.system("/usr/bin/sed -i '' -e 's/\\$DICT_NAME/%s/g' '%s/DictInfo.plist'" % (dict_name, dict_path))
+    os.system("/usr/bin/sed -i '' -e 's/\\$DICT_ID/%s/g' '%s/DictInfo.plist'" % (dict_id, dict_path))
 
-# os.putenv("DYLD_LIBRARY_PATH", dyld_lib_path)
+    os.system("cat %s/DictInfo.plist" % dict_path)
+    build_dictionary(dict_path, dict_id, self_path)
 
-dict_path = "%s/dict-%s" % (temp_dir, dict_id)
-
-os.system("cp -r '%s/templates' '%s'" % (self_path, dict_path))
-
-if script_file: 
-    script_opt = "-m %s '%s' " % (module, script_file)
-else:
-    script_opt = ""
-
-if options.debug:
-    debug_opt = "-d "
-else:
-    debug_opt = ""
-
-if options.console:
-    out_file = ""
-else:
-    out_file = " '%s/Dictionary.xml'" % dict_path
-
-cmd = "DYLD_LIBRARY_PATH='%s/bin' '%s/bin/sdconv' %s%s'%s'%s" % (self_path, 
-                                                                 self_path,
-                                                                 debug_opt,
-                                                                 script_opt,
-                                                                 ifo_file, 
-                                                                 out_file)
-print cmd
-(status, output) = commands.getstatusoutput(cmd)
-if status != 0:
-    print "convert dictionary %s failed, abort now." % dict_id
     cleanup()
-    sys.exit(1)
 
-if options.console:
-    print output
-    sys.exit(1)
+if __name__ == '__main__':
+    usage = "usage: %prog [options] <stardict-*.bz2 | *.ifo>"
+    parser = OptionParser(usage)
+    parser.add_option("-s", "--script", dest="script",
+                      help="use FILE as script to process dictionary",
+                      metavar="FILE")
+    parser.add_option("-n", "--name", dest="name", metavar="STR",
+                      help="use STR as the dictionary name [default: guessed]")
+    parser.add_option("-i", "--id", dest="id", metavar="STR",
+                      help="use STR as the dictionary id [default: guessed]")
+    parser.add_option("-d", "--debug", dest="debug", action="store_true",
+                      help="enable debugging mode (only converts a few entries)")
+    parser.add_option("-l", "--list", dest="list", action="store_true",
+                      help="list installed dictionaries")
+    parser.add_option("-c", "--console", dest="console", action="store_true",
+                      help="output to console, do not write files")
 
-if options.name:
-    dict_name = options.name
-else:
-    dict_name = output.split()[0]
+    (options, args) = parser.parse_args()
 
-print "dict_name = %s" % dict_name
+    if options.list:
+        list_dictionaries()
+        sys.exit()
 
-os.system("/usr/bin/sed -i '' -e 's/\\$DICT_NAME/%s/g' '%s/DictInfo.plist'" % (dict_name, dict_path))
-os.system("/usr/bin/sed -i '' -e 's/\\$DICT_ID/%s/g' '%s/DictInfo.plist'" % (dict_id, dict_path))
+    if len(args) != 1:
+        logging.error("usage: convert [options] <stardict-*.bz2 | *.ifo> (-h for full usage)")
+        sys.exit(1)
 
-os.system("cat %s/DictInfo.plist" % dict_path)
-os.system("pushd %s; python build-dict.py %s '%s'; popd" % (dict_path, dict_id, self_path))
-
-cleanup()
+    convert_dictionary(args[0], options)
 

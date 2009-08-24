@@ -30,9 +30,9 @@ while ( my $record = <stdin> )
 		next;
 	}
 	
-	my ( $key_text, $body_id, $flags, $title, $anchor, $yomi ) = split /\t/, $record;
+	my ( $key_text, $body_id, $flags, $title, $anchor, $yomi, $entry_title ) = split /\t/, $record;
 	
-	if ( ( not defined( $yomi ) ) or ( not defined( $body_id ) ) )
+	if ( ( not defined( $entry_title ) ) or ( not defined( $body_id ) ) )
 	{
 		printf STDERR "*** Unknown format. Skipped [%s]\n", $record;
 		next;

@@ -15,6 +15,7 @@ my %entryToBodyHash;
 # =============================================================
 
 
+
 # =============================================================
 # main
 # =============================================================
@@ -24,9 +25,9 @@ if ( $#ARGV != 0 )
 	print STDERR "Usage: replaceEntryIdByBodyId.pl entry_body_list < key_entry_list > key_body_list\n";
 	print STDERR "    Input data format\n";
 	print STDERR "        entry_body_list: entry_id<tab>body_id\n";
-	print STDERR "        key_entry_list : key_text<tab>entry_id<tab>flags<tab>title<tab>anchor<tab>yomi\n";
+	print STDERR "        key_entry_list : key_text<tab>entry_id<tab>flags<tab>title<tab>anchor<tab>yomi<tab>entry_title\n";
 	print STDERR "    Output data format\n";
-	print STDERR "        key_body_list  : key_text<tab>body_id<tab>flags<tab>title<tab>anchor<tab>yomi\n";
+	print STDERR "        key_body_list  : key_text<tab>body_id<tab>flags<tab>title<tab>anchor<tab>yomi<tab>entry_title\n";
 	exit 2;
 }
 my $matching_table_file_path = $ARGV[0];
@@ -48,8 +49,8 @@ sub replaceEntryIdByBodyId
 			next;
 		}
 		
-		my ( $key_text, $entry_id, $flags, $title, $anchor, $yomi ) = split /\t/, $record;
-		if ( not defined $anchor )
+		my ( $key_text, $entry_id, $flags, $title, $anchor, $yomi, $entry_title ) = split /\t/, $record;
+		if ( not defined $entry_title )
 		{
 			printf STDERR "*** Unknown format. Skipped [%s]\n", $record;
 			next;
@@ -62,8 +63,8 @@ sub replaceEntryIdByBodyId
 			next;
 		}
 		
-		printf "%s\t%s\t%s\t%s\t%s\t%s\n", 
-			$key_text, $body_id, $flags, $title, $anchor, $yomi;
+		printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
+			$key_text, $body_id, $flags, $title, $anchor, $yomi, $entry_title;
 	}
 }
 
@@ -77,8 +78,10 @@ sub readMatchingTable
 	open( ENTRY_TO_BODY, $file_path )
 		or die "*** Not found: $file_path";
 	
-	while( <ENTRY_TO_BODY> ) {		chomp;
-		my ( $entry_id, $body_id ) = split /\t/;		if ( defined $entry_id and defined $body_id )
+	while( <ENTRY_TO_BODY> ) {
+		chomp;
+		my ( $entry_id, $body_id ) = split /\t/;
+		if ( defined $entry_id and defined $body_id )
 		{
 			if ( defined( $entryToBodyHash{ $entry_id } ) )
 			{
