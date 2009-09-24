@@ -46,7 +46,7 @@ def build_dictionary(work_dir, dict_name, dict_build_tool_dir):
 
     # Enable 10.6 support if available
     extra_flags = ""
-    if commands.getoutput("sw_vers -productVersion") == "10.6":
+    if commands.getoutput("sw_vers -productVersion")[:4] == "10.6":
         extra_flags = "-v 10.6 "
 
     cmd = "\"%s/build_dict.sh\" %s%s Dictionary.xml Dictionary.css DictInfo.plist" % \
